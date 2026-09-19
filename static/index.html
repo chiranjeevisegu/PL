@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FPL Hub — Fantasy Premier League Analytics</title>
+  <meta name="description" content="Live Fantasy Premier League stats, PL table, upcoming fixtures, and intelligent squad builder with drag-and-drop." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo-wrap">⚽</div>
+    <div>
+      <div class="nav-title">FPL<span>Hub</span></div>
+      <div class="nav-sub">Fantasy Premier League Analytics</div>
+    </div>
+  </div>
+  <div class="nav-gw" id="gw-pill">Gameweek —</div>
+  <div class="nav-right">
+    <div class="live-indicator"><span class="live-dot"></span>Live</div>
+    <span class="update-time" id="update-time"></span>
+    <button class="btn-refresh" id="btn-refresh">↺ Refresh</button>
+  </div>
+</nav>
+
+<!-- ═══ HERO STRIP ═══ -->
+<div class="hero-strip">
+  <div class="hero-item">
+    <div class="hero-val" id="h-total">—</div>
+    <div class="hero-lbl">FPL Managers</div>
+  </div>
+  <div class="hero-divider"></div>
+  <div class="hero-item">
+    <div class="hero-val" id="h-avg">—</div>
+    <div class="hero-lbl">GW Average</div>
+  </div>
+  <div class="hero-divider"></div>
+  <div class="hero-item">
+    <div class="hero-val" id="h-high">—</div>
+    <div class="hero-lbl">GW Highest</div>
+  </div>
+  <div class="hero-divider"></div>
+  <div class="hero-item hero-deadline">
+    <div class="hero-val" id="h-deadline">—</div>
+    <div class="hero-lbl" id="h-deadline-lbl">Next Deadline</div>
+  </div>
+</div>
+
+<!-- ═══ APP LAYOUT ═══ -->
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <span class="sidebar-heading">Filters</span>
+      <button class="btn-link" id="btn-reset">Reset all</button>
+    </div>
+
+    <div class="filter-block">
+      <div class="filter-label">Position</div>
+      <div class="pos-chips" id="pos-chips">
+        <button class="pos-chip active" data-pos="GKP">GKP</button>
+        <button class="pos-chip active" data-pos="DEF">DEF</button>
+        <button class="pos-chip active" data-pos="MID">MID</button>
+        <button class="pos-chip active" data-pos="FWD">FWD</button>
+      </div>
+    </div>
+
+    <div class="filter-block">
+      <div class="filter-label">Price Range</div>
+      <div class="range-row">
+        <span id="price-min-lbl" class="range-label">£4.0m</span>
+        <span id="price-max-lbl" class="range-label">£15.0m</span>
+      </div>
+      <input type="range" class="fpl-slider" id="price-min" min="40" max="200" value="40" step="1" />
+      <input type="range" class="fpl-slider" id="price-max" min="40" max="200" value="200" step="1" />
+    </div>
+
+    <div class="filter-block">
+      <div class="filter-label">Min Minutes — <span id="mins-val">0</span></div>
+      <input type="range" class="fpl-slider" id="mins-slider" min="0" max="450" value="0" step="45" />
+    </div>
+
+    <div class="filter-block">
+      <div class="filter-label">Team</div>
+      <input type="text" class="fpl-input" id="team-search" placeholder="Search team…" />
+      <div class="team-list" id="team-list"></div>
+    </div>
+
+    <div class="filter-block">
+      <div class="filter-label">Player Name</div>
+      <input type="text" class="fpl-input" id="player-search" placeholder="e.g. Salah, Haaland…" />
+    </div>
+
+    <div class="filter-block">
+      <label class="toggle-row">
+        <span class="filter-label" style="margin:0">Available only</span>
+        <label class="fpl-toggle">
+          <input type="checkbox" id="avail-toggle" />
+          <span class="fpl-toggle-thumb"></span>
+        </label>
+      </label>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- TAB BAR -->
+    <div class="tab-bar" id="tab-bar">
+      <button class="tab active" data-tab="players">📋 Players</button>
+      <button class="tab" data-tab="charts">📊 Charts</button>
+      <button class="tab" data-tab="plnews">🏆 PL Live</button>
+      <button class="tab" data-tab="squad">⚽ Squad Builder</button>
+    </div>
+
+    <!-- ── TAB: PLAYERS ── -->
+    <section class="tab-panel active" id="panel-players">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <span class="count-badge" id="table-info">— players</span>
+        </div>
+        <div class="toolbar-right">
+          <label class="toolbar-label">Sort by</label>
+          <select class="fpl-select" id="sort-select">
+            <option value="total_points">Total Points</option>
+            <option value="value_score">Value Score</option>
+            <option value="form">Form</option>
+            <option value="price">Price</option>
+            <option value="selected_by_percent">Ownership %</option>
+            <option value="goals_scored">Goals</option>
+            <option value="assists">Assists</option>
+            <option value="minutes">Minutes</option>
+            <option value="expected_goal_involvements">xGI</option>
+            <option value="ict_index">ICT Index</option>
+            <option value="transfers_in_event">GW Transfers ▲</option>
+          </select>
+          <button class="btn-csv" id="btn-download">⬇ CSV</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="data-table" id="player-table">
+          <thead>
+            <tr>
+              <th class="th-s">#</th>
+              <th class="th-sort" data-col="name">Player</th>
+              <th class="th-sort" data-col="team_name">Team</th>
+              <th class="th-sort tc" data-col="position">Pos</th>
+              <th class="th-sort tr" data-col="price">£</th>
+              <th class="th-sort tr" data-col="total_points">Pts</th>
+              <th class="th-sort tr" data-col="value_score">Val</th>
+              <th class="th-sort tr" data-col="form">Form</th>
+              <th class="th-sort tr" data-col="selected_by_percent">Own%</th>
+              <th class="th-sort tr" data-col="goals_scored">G</th>
+              <th class="th-sort tr" data-col="assists">A</th>
+              <th class="th-sort tr" data-col="minutes">Mins</th>
+              <th class="th-sort tr" data-col="expected_goal_involvements">xGI</th>
+              <th class="th-sort tr" data-col="ict_index">ICT</th>
+            </tr>
+          </thead>
+          <tbody id="player-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+
+    <!-- ── TAB: CHARTS ── -->
+    <section class="tab-panel" id="panel-charts">
+      <div class="charts-grid">
+
+        <div class="chart-card span-2">
+          <div class="chart-card-header">
+            <h3>Price vs Total Points</h3>
+            <span class="chart-tag">All positions</span>
+          </div>
+          <div class="chart-area tall"><canvas id="chart-scatter"></canvas></div>
+          <div class="chart-explanation">
+            <strong>How to read this:</strong> Each dot is one player. Dots in the <em>top-left corner</em> offer the best value — high points at a low price. Expensive players on the right side need to deliver consistently to justify their cost. Use the position filter chips on the left to zoom in.
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top 10 — Form</h3>
+            <span class="chart-tag">Last 30 days</span>
+          </div>
+          <div class="chart-area"><canvas id="chart-form"></canvas></div>
+          <div class="chart-explanation">
+            <strong>What is form?</strong> A rolling 30-day average of FPL points. Scores above <strong>6.0</strong> are excellent — these players are in red-hot shape right now. Form fades quickly for injured or rested players, so chase current form over past reputation.
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top 10 — Value Score</h3>
+            <span class="chart-tag">180+ mins played</span>
+          </div>
+          <div class="chart-area"><canvas id="chart-value"></canvas></div>
+          <div class="chart-explanation">
+            <strong>What is value score?</strong> Total Points ÷ Price (£m). A score above <strong>4.0</strong> means strong returns per pound spent. Only players with 180+ minutes are shown to remove players with lucky one-off scores. These are your budget gems.
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top 10 — Season Points</h3>
+            <span class="chart-tag">All gameweeks</span>
+          </div>
+          <div class="chart-area"><canvas id="chart-pts"></canvas></div>
+          <div class="chart-explanation">
+            <strong>Why it matters:</strong> Consistent high scorers over the season are reliable captaincy options. Note that one big haul can inflate a player's total — check if points came from one gameweek or spread across many before captaining.
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top 10 — xGI</h3>
+            <span class="chart-tag">Expected involvements</span>
+          </div>
+          <div class="chart-area"><canvas id="chart-xgi"></canvas></div>
+          <div class="chart-explanation">
+            <strong>What is xGI?</strong> Expected Goal Involvements = xG + xA. It measures chance quality and key passes, regardless of whether the player converted. A high xGI player who hasn't scored yet may be "due" — they're called <em>differentials</em> and can be low-ownership picks.
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Points by Position</h3>
+            <span class="chart-tag">Season total</span>
+          </div>
+          <div class="chart-area"><canvas id="chart-pos"></canvas></div>
+          <div class="chart-explanation">
+            <strong>Budget allocation:</strong> See which position group contributes the most total points. When midfielders dominate, consider spending more budget on premium mids. Goalkeepers and defenders earn extra for clean sheets — a solid defensive team can be very profitable.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── TAB: PL LIVE ── -->
+    <section class="tab-panel" id="panel-plnews">
+      <div class="plnews-layout">
+
+        <!-- League Table -->
+        <div class="plnews-table-wrap">
+          <div class="section-header">
+            <h2>Premier League Table</h2>
+            <div class="zone-legend">
+              <span class="zone-dot ucl"></span>Champions League
+              <span class="zone-dot uel"></span>Europa League
+              <span class="zone-dot rel"></span>Relegation
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table standings-table">
+              <thead>
+                <tr>
+                  <th class="th-s">#</th>
+                  <th>Club</th>
+                  <th class="tr">P</th>
+                  <th class="tr">W</th>
+                  <th class="tr">D</th>
+                  <th class="tr">L</th>
+                  <th class="tr">GF</th>
+                  <th class="tr">GA</th>
+                  <th class="tr">GD</th>
+                  <th class="tr standings-pts-col">Pts</th>
+                </tr>
+              </thead>
+              <tbody id="standings-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Results + Fixtures + Top Stats -->
+        <div class="plnews-right">
+
+          <!-- Recent Results -->
+          <div class="plnews-section">
+            <div class="section-header">
+              <h3 id="recent-gw-title">Recent Results</h3>
+            </div>
+            <div class="matches-list" id="recent-results">
+              <div class="loading-placeholder">Loading results…</div>
+            </div>
+          </div>
+
+          <!-- Upcoming Fixtures -->
+          <div class="plnews-section">
+            <div class="section-header">
+              <h3 id="upcoming-gw-title">Upcoming Fixtures</h3>
+            </div>
+            <div class="matches-list" id="upcoming-fixtures">
+              <div class="loading-placeholder">Loading fixtures…</div>
+            </div>
+          </div>
+
+          <!-- Top Stats -->
+          <div class="plnews-section">
+            <div class="section-header"><h3>Season Top Stats</h3></div>
+            <div class="top-stats-grid">
+              <div class="top-stat-col">
+                <div class="top-stat-title">⚽ Top Scorers</div>
+                <ol class="top-stat-list" id="top-scorers-list"></ol>
+              </div>
+              <div class="top-stat-col">
+                <div class="top-stat-title">🎯 Top Assists</div>
+                <ol class="top-stat-list" id="top-assists-list"></ol>
+              </div>
+              <div class="top-stat-col">
+                <div class="top-stat-title">🔥 Top Form</div>
+                <ol class="top-stat-list" id="top-form-list"></ol>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ── TAB: SQUAD BUILDER ── -->
+    <section class="tab-panel" id="panel-squad">
+
+      <!-- Config row -->
+      <div class="squad-config-bar">
+        <div class="squad-config-item">
+          <label class="filter-label">Budget</label>
+          <div class="budget-display">
+            <span id="budget-display">£100.0m</span>
+            <input type="range" class="fpl-slider" id="budget-slider" min="80" max="120" value="100" step="0.5" />
+          </div>
+        </div>
+        <div class="squad-config-item">
+          <label class="filter-label">Suggest Players By</label>
+          <select class="fpl-select" id="pool-sort-metric">
+            <option value="total_points">Total Points</option>
+            <option value="form">Form</option>
+            <option value="value_score">Value Score</option>
+            <option value="ict_index">ICT Index</option>
+            <option value="expected_goal_involvements">xGI</option>
+          </select>
+        </div>
+        <div class="squad-config-item">
+          <label class="filter-label">Pool</label>
+          <label class="toggle-row">
+            <label class="fpl-toggle">
+              <input type="checkbox" id="squad-avail" checked />
+              <span class="fpl-toggle-thumb"></span>
+            </label>
+            <span style="font-size:.8rem;color:var(--muted)">Available only</span>
+          </label>
+        </div>
+        <div class="squad-config-item">
+          <label class="filter-label">&nbsp;</label>
+          <button class="btn-clear-pitch" id="btn-clear-pitch">🗑 Clear Pitch</button>
+        </div>
+      </div>
+
+      <p class="squad-rules-text">
+        Drag player cards onto the pitch · 2 GKP · 5 DEF · 5 MID · 3 FWD · Max 3 per club · Budget £100m
+      </p>
+
+      <!-- Builder: pool + pitch -->
+      <div class="builder-layout">
+
+        <!-- Left: Player Pool -->
+        <div class="player-pool-panel">
+          <div class="pool-header">
+            <span class="pool-title">Player Pool</span>
+            <span class="pool-count" id="pool-count">— players</span>
+          </div>
+          <div class="pool-pos-tabs" id="pool-pos-tabs">
+            <button class="pool-pos-tab active" data-pos="ALL">All</button>
+            <button class="pool-pos-tab" data-pos="GKP">GKP</button>
+            <button class="pool-pos-tab" data-pos="DEF">DEF</button>
+            <button class="pool-pos-tab" data-pos="MID">MID</button>
+            <button class="pool-pos-tab" data-pos="FWD">FWD</button>
+          </div>
+          <input type="text" class="fpl-input" id="pool-search" placeholder="Search player name…" />
+          <div class="pool-list" id="pool-list">
+            <!-- Player cards injected here -->
+          </div>
+        </div>
+
+        <!-- Right: Pitch + drop zones -->
+        <div class="pitch-panel">
+          <div class="pitch-field" id="pitch-field">
+            <!-- GKP row -->
+            <div class="pitch-pos-section">
+              <div class="pitch-row" id="row-GKP" data-pos="GKP"></div>
+            </div>
+            <!-- DEF row -->
+            <div class="pitch-pos-section">
+              <div class="pitch-row" id="row-DEF" data-pos="DEF"></div>
+            </div>
+            <!-- MID row -->
+            <div class="pitch-pos-section">
+              <div class="pitch-row" id="row-MID" data-pos="MID"></div>
+            </div>
+            <!-- FWD row -->
+            <div class="pitch-pos-section">
+              <div class="pitch-row" id="row-FWD" data-pos="FWD"></div>
+            </div>
+          </div>
+          <div class="pitch-footer">
+            <div class="pitch-footer-stats">
+              <span id="squad-filled">0 / 15 selected</span>
+              <span class="pitch-sep">·</span>
+              <span id="squad-cost">£0.0m spent</span>
+            </div>
+            <button class="btn-finalize" id="btn-finalize-squad" disabled>
+              Save Squad ↓
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Finalized squads appear here -->
+      <div id="finalized-squads"></div>
+
+    </section>
+
+  </main>
+</div>
+
+<!-- Loading overlay -->
+<div class="overlay" id="overlay">
+  <div class="spinner-box">
+    <div class="spinner-ring"></div>
+    <div class="spinner-text">Fetching live FPL data…</div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
