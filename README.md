@@ -2,6 +2,8 @@
 
 A full-stack web application designed for Premier League fans and FPL (Fantasy Premier League) managers. It provides live standings, real-time player data, historical milestones, and a powerful tactical Squad Builder—all wrapped in a clean, modern, and highly responsive UI.
 
+**🌍 Live Demo:** [https://pl-gnzf.onrender.com/](https://pl-gnzf.onrender.com/)
+
 ## Features
 
 - **Auth System**: Secure login and registration with local SQLite storage. (Demo credentials: `admin` / `admin`).
@@ -64,7 +66,8 @@ npm run dev
 ```
 
 ### 3. Usage
-- Open `http://localhost:5173` (or the URL Vite provides).
+- **Live Version**: Visit [https://pl-gnzf.onrender.com/](https://pl-gnzf.onrender.com/)
+- **Local Version**: Open `http://localhost:5173` (or the URL Vite provides).
 - Log in with the demo account (`admin` / `admin`) or create a new one.
 - Explore the live tabs and build your squad!
 
